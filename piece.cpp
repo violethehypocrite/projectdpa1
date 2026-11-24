@@ -72,3 +72,42 @@ const char* const SHAPES[7][4] = {
 };
 
 }
+
+Piece::Piece(PieceType type)
+    : type_(type), x_(0), y_(0), rotation_(0) {}
+
+void Piece::setPosition(int x, int y) {
+    x_ = x;
+    y_ = y;
+}
+
+void Piece::move(int dx, int dy) {
+    x_ += dx;
+    y_ += dy;
+}
+
+void Piece::rotateClockwise() {
+    rotation_ = (rotation_ + 1) % 4;
+}
+
+void Piece::rotateCounterClockwise() {
+    rotation_ = (rotation_ + 3) % 4;
+}
+
+bool Piece::isBlock(int row, int col) const {
+    if (row < 0 || row >= 4 || col < 0 || col >= 4) return false;
+    return SHAPES[static_cast<int>(type_)][rotation_][row * 4 + col] == 'X';
+}
+
+PieceType Piece::randomType() {
+    static std::mt19937 rng{std::random_device{}()};
+    static std::vector<int> bag;
+
+    if (bag.empty()) {
+        for (int i = 0; i < 7; ++i) bag.push_back(i);
+        std::shuffle(bag.begin(), bag.end(), rng);
+    }
+    int value = bag.back();
+    bag.pop_back();
+    return static_cast<PieceType>(value);
+}
