@@ -42,3 +42,30 @@ if (gy >= 0 && grid_[gy][gx] != 0) return false;
     }
     return true;
 }
+void Board::lockPiece(const Piece& piece) {
+    for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+            if (!piece.isBlock(r, c)) continue;
+
+            int gx = piece.x() + c;
+            int gy = piece.y() + r;
+            if (gx >= 0 && gx < WIDTH && gy >= 0 && gy < HEIGHT)
+                grid_[gy][gx] = piece.colorId();
+        }
+    }
+}
+
+int Board::clearFullLines() {
+    int cleared = 0;
+
+    // Periksa dari baris paling bawah ke atas
+    for (int r = HEIGHT - 1; r >= 0; ) {
+        bool full = true;
+        for (int c = 0; c < WIDTH; ++c) {
+            if (grid_[r][c] == 0) { full = false; break; }
+        }
+
+        if (!full) {
+            --r;
+            continue;
+        }
