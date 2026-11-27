@@ -85,3 +85,72 @@ void drawCell(int y, int x, int colorId) {
 }
 
 }
+
+Game::Game()
+    : current_(), next_(), score_(0), lines_(0), level_(1),
+      gameOver_(false), quit_(false), paused_(false) {
+    reset();
+}
+
+void Game::reset() {
+    board_.clear();
+    score_ = 0;
+    lines_ = 0;
+    level_ = 1;
+    gameOver_ = false;
+    quit_ = false;
+    paused_ = false;
+    next_ = Piece(Piece::randomType());
+    spawnPiece();
+}
+
+void Game::spawnPiece() {
+    current_ = next_;
+    current_.setPosition(3, 0);  
+    lockTicks_ = 0;
+    next_ = Piece(Piece::randomType());
+
+    if (!board_.isValidPosition(current_)) gameOver_ = true;
+}
+
+bool Game::tryMove(int dx, int dy) {
+    Piece moved = current_;
+    moved.move(dx, dy);
+    if (!board_.isValidPosition(moved)) return false;
+    current_ = moved;
+    return true;
+}
+
+void Game::tryRotate() {
+    Piece rotated = current_;
+    rotated.rotateClockwise();
+
+    for (int shift : {0, -1, 1, -2, 2}) {
+        Piece candidate = rotated;
+        candidate.move(shift, 0);
+        if (board_.isValidPosition(candidate)) {
+            current_ = candidate;
+            return;
+        }
+    }
+}
+
+void Game::hardDrop() {
+    int distance = 0;
+    while (tryMove(0, 1)) ++distance;
+    score_ += distance * 2;  
+    lockCurrentPiece();
+}
+
+void Game::lockCurrentPiece() {
+    board_.lockPiece(current_);
+
+    int cleared = board_.clearFullLines();
+    if (cleared > 0) {
+        static const int POINTS[5] = {0, 100, 300, 500, 800};
+        score_ += POINTS[cleared] * level_;
+        lines_ += cleared;
+        level_ = lines_ / 10 + 1;  
+    }
+    spawnPiece();
+}
