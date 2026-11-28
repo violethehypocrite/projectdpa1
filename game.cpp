@@ -179,3 +179,125 @@ void Game::draw() const {
     for (int r = 0; r < Board::HEIGHT; ++r)
         for (int c = 0; c < Board::WIDTH; ++c)
             view[r][c] = board_.cell(r, c);
+
+    
+for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+            if (!current_.isBlock(r, c)) continue;
+            int gx = current_.x() + c;
+            int gy = current_.y() + r;
+            if (gx >= 0 && gx < Board::WIDTH && gy >= 0 && gy < Board::HEIGHT)
+                view[gy][gx] = current_.colorId();
+        }
+    }
+
+    mvaddstr(0, 2, "===== TETRIS =====");
+
+    
+    const int right = BOARD_LEFT + 2 * Board::WIDTH + 1;
+    const int bottom = BOARD_TOP + Board::HEIGHT + 1;
+    mvaddch(BOARD_TOP, BOARD_LEFT, ACS_ULCORNER);
+    mvaddch(BOARD_TOP, right, ACS_URCORNER);
+    mvaddch(bottom, BOARD_LEFT, ACS_LLCORNER);
+    mvaddch(bottom, right, ACS_LRCORNER);
+    for (int x = BOARD_LEFT + 1; x < right; ++x) {
+        mvaddch(BOARD_TOP, x, ACS_HLINE);
+        mvaddch(bottom, x, ACS_HLINE);
+    }
+    for (int y = BOARD_TOP + 1; y < bottom; ++y) {
+        mvaddch(y, BOARD_LEFT, ACS_VLINE);
+        mvaddch(y, right, ACS_VLINE);
+    }
+
+    for (int r = 0; r < Board::HEIGHT; ++r)
+        for (int c = 0; c < Board::WIDTH; ++c)
+            drawCell(BOARD_TOP + 1 + r, BOARD_LEFT + 1 + 2 * c, view[r][c]);
+
+    const int y0 = BOARD_TOP + 1;
+    mvprintw(y0 + 1, INFO_X, "Skor     : %d", score_);
+    mvprintw(y0 + 2, INFO_X, "Garis    : %d", lines_);
+    mvprintw(y0 + 3, INFO_X, "Level    : %d", level_);
+
+    mvaddstr(y0 + 5, INFO_X, "Berikutnya:");
+    for (int r = 0; r < 4; ++r)
+        for (int c = 0; c < 4; ++c)
+            if (next_.isBlock(r, c))
+                drawCell(y0 + 6 + r, INFO_X + 2 + 2 * c, next_.colorId());
+
+    mvaddstr(y0 + 11, INFO_X, "Kontrol:");
+    mvaddstr(y0 + 12, INFO_X, " A / <-  : kiri");
+    mvaddstr(y0 + 13, INFO_X, " D / ->  : kanan");
+    mvaddstr(y0 + 14, INFO_X, " W / ^   : putar");
+    mvaddstr(y0 + 15, INFO_X, " S / v   : turun");
+    mvaddstr(y0 + 16, INFO_X, " Spasi   : jatuh langsung");
+    mvaddstr(y0 + 17, INFO_X, " P       : jeda");
+    mvaddstr(y0 + 18, INFO_X, " Q       : keluar");
+
+    if (gameOver_) {
+        attron(A_BOLD);
+        mvprintw(bottom + 1, 2, "*** GAME OVER ***  Skor akhir: %d", score_);
+        attroff(A_BOLD);
+    } else if (paused_) {
+        attron(A_BOLD);
+        mvaddstr(bottom + 1, 2, "--- JEDA (tekan P untuk lanjut) ---");
+        attroff(A_BOLD);
+    }
+
+    refresh();
+}
+
+void Game::run() {
+    using Clock = std::chrono::steady_clock;
+
+    CursesGuard curses;  
+
+    auto lastTick = Clock::now();
+    draw();
+
+    while (!quit_ && !gameOver_) {
+        bool needRedraw = false;
+
+        int ch = getch();
+        if (ch != ERR) {
+            needRedraw = true;
+
+            switch (ch) {
+                case 'q': case 'Q':
+                    quit_ = true;
+                    break;
+
+                case 'p': case 'P':
+                    paused_ = !paused_;
+                    lastTick = Clock::now();
+                    break;
+
+                case KEY_RESIZE:  
+                    break;
+
+                default:
+                    if (paused_) break;  
+                    switch (ch) {
+                        case 'a': case 'A': case KEY_LEFT:
+                            tryMove(-1, 0);
+                            break;
+                        case 'd': case 'D': case KEY_RIGHT:
+                            tryMove(1, 0);
+                            break;
+                        case 'w': case 'W': case KEY_UP:
+                            tryRotate();
+                            break;
+                        case 's': case 'S': case KEY_DOWN:
+                            if (tryMove(0, 1)) ++score_;  
+                            lastTick = Clock::now();
+                            break;
+                        case ' ':
+                            hardDrop();
+                            lastTick = Clock::now();
+                            break;
+                        default:
+                            needRedraw = false;  
+                            break;
+                    }
+                    break;
+            }
+        }
