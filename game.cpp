@@ -301,3 +301,28 @@ void Game::run() {
                     break;
             }
         }
+
+
+        if (!paused_ && !gameOver_ && !quit_) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                Clock::now() - lastTick).count();
+            if (elapsed >= dropIntervalMs()) {
+                tick();
+                lastTick = Clock::now();
+                needRedraw = true;
+            }
+        }
+
+        if (needRedraw) draw();
+    }
+
+    if (gameOver_) {
+        draw();
+        mvaddstr(BOARD_TOP + Board::HEIGHT + 3, 2,
+                 "Tekan tombol apa saja untuk lanjut...");
+        refresh();
+        flushinp();   
+        timeout(-1);  
+        getch();
+    }
+}
